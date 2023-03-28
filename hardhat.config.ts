@@ -15,12 +15,15 @@ if (mnemonicFileName != null && fs.existsSync(mnemonicFileName)) {
 }
 
 function getNetwork(network : string) {
-  return {
+  console.log(`Using ${network} network`)
+  const config = {
     url: `https://${network}.infura.io/v3/${infuraKey}`,
     accounts: mnemonic.startsWith('0x') ? [mnemonic] : {
       mnemonic: mnemonic,
     },
   };
+  console.log(`url : ${config.url}`)
+  return config;
 }
 
 const config: HardhatUserConfig = {
@@ -47,7 +50,7 @@ task("test-paymaster", "Test paymaster")
     let initCode = "0x";
     if(await hre.ethers.provider.getCode(sender.address) == '0x') {
       console.log("Sender is not deployed");
-      initCode = await getInitCode(hre, sender.address, taskArgs.nonce);
+      initCode = getInitCode(hre, sender.address, taskArgs.nonce);
     }
     const userOp = await fillUserOp(hre, {
       sender: sender.address,
@@ -75,7 +78,7 @@ task("test-bundler", "Test paymaster")
     let initCode = "0x";
     if(await hre.ethers.provider.getCode(sender.address) == '0x') {
       console.log("Sender is not deployed");
-      initCode = await getInitCode(hre, taskArgs.owner, taskArgs.nonce);
+      initCode = getInitCode(hre, taskArgs.owner, taskArgs.nonce);
     }
     const userOp = await fillUserOp(hre, {
       sender: sender.address,

@@ -22,7 +22,6 @@ function getNetwork(network : string) {
       mnemonic: mnemonic,
     },
   };
-  console.log(`url : ${config.url}`)
   return config;
 }
 
@@ -50,7 +49,7 @@ task("test-paymaster", "Test paymaster")
     let initCode = "0x";
     if(await hre.ethers.provider.getCode(sender.address) == '0x') {
       console.log("Sender is not deployed");
-      initCode = getInitCode(hre, sender.address, taskArgs.nonce);
+      initCode = getInitCode(hre, taskArgs.address, taskArgs.nonce);
     }
     const userOp = await fillUserOp(hre, {
       sender: sender.address,

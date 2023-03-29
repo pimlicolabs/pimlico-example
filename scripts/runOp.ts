@@ -60,8 +60,11 @@ export async function fillUserOp(hre: HardhatRuntimeEnvironment, userOp:Partial<
   userOp.callGasLimit = hexlify(1000000);
   userOp.verificationGasLimit = hexlify(1000000);
   userOp.preVerificationGas = hexlify(1000000);
-  userOp.maxFeePerGas = hexlify(100000000000);
-  userOp.maxPriorityFeePerGas = hexlify(100000000000);
+
+  const gasPrice = await hre.ethers.provider.getGasPrice()
+
+  userOp.maxFeePerGas = hexlify(gasPrice);
+  userOp.maxPriorityFeePerGas = hexlify(gasPrice);
   userOp.paymasterAndData = hexlify('0x');
   userOp.signature = hexlify('0x');
   return userOp as UserOpStruct;

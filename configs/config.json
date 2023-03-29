@@ -2,7 +2,7 @@
     "arbitrum" : {
         "entrypoint" : "0x0576a174D229E3cFA37253523E645A78A0C91B57",
         "paymaster" : "0xa880EaE8900eB59Bf7daD9BdB741A086238aDCa9",
-        "factory" : ""
+        "factory" : "0x09c58cf6be8E25560d479bd52B4417d15bCA2845"
     },
     "goerli" : {
         "entrypoint" : "0x0576a174D229E3cFA37253523E645A78A0C91B57",

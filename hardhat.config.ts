@@ -1,7 +1,7 @@
 import { HardhatUserConfig } from "hardhat/config";
 import fs from 'fs'
 import { task } from "hardhat/config";
-import { runOp1, callData, fillUserOp, getInitCode, getSender, signUserOp, signUserOpWithPaymaster } from "./scripts/runOp";
+import { runOp1, callData, fillUserOp, getInitCode, getSender, signUserOp, signUserOpWithPaymaster, estimateUserOperationGas } from "./scripts/runOp";
 import "@nomiclabs/hardhat-ethers";
 import { hexlify } from "ethers/lib/utils";
 import { Signer, Wallet } from "ethers";
@@ -68,7 +68,7 @@ task("test-paymaster", "Test paymaster")
     await runOp1(hre, userOp);
   });
 
-task("test-bundler", "Test paymaster")
+task("test-bundler", "Test bundler")
   .addParam('owner', 'Owner address')
   .addParam('nonce', 'Nonce')
   .setAction(async (taskArgs, hre) => {
@@ -95,5 +95,27 @@ task("test-bundler", "Test paymaster")
     userOp.paymasterAndData = hexlify("0x");
     await runOp1(hre, userOp);
   });
+
+task("test-estimateGas", "Test estimateGas")
+  .addParam('owner', 'Owner address')
+  .addParam('nonce', 'Nonce')
+  .setAction(async (taskArgs, hre) => {
+    const sender = await getSender(hre,taskArgs.owner, taskArgs.nonce);
+    let initCode = "0x";
+    if(await hre.ethers.provider.getCode(sender.address) == '0x') {
+      console.log("Sender is not deployed");
+      initCode = getInitCode(hre, taskArgs.owner, taskArgs.nonce);
+    }
+    const userOp = await fillUserOp(hre, {
+      sender: sender.address,
+      initCode: initCode,
+      callData: await callData(hre, sender.address, 0, "0x"),
+    });
+
+    const { preVerificationGas, verificationGas, callGasLimit } = await estimateUserOperationGas(hre, userOp);
+    console.log("preVerificationGas: " + preVerificationGas);
+    console.log("verificationGas: " + verificationGas);
+    console.log("callGasLimit: " + callGasLimit);
+  })
 
 export default config;

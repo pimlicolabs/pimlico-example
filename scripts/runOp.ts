@@ -36,6 +36,16 @@ export async function runOp1(hre : HardhatRuntimeEnvironment, userOp : UserOpStr
   console.log("Receipt: ", receipt);
 }
 
+export async function estimateUserOperationGas(hre : HardhatRuntimeEnvironment, userOp : UserOpStruct) {
+  const bundlerProvider = new JsonRpcProvider(getBundlerUrl(hre.network.name));
+  const {preVerificationGas, verificationGas, callGasLimit} = await bundlerProvider.send("eth_estimateUserOperationGas", [
+    userOp,
+    config[hre.network.name].entrypoint,
+  ]);
+
+  return {preVerificationGas, verificationGas, callGasLimit};
+}
+
 export async function signUserOp(hre: HardhatRuntimeEnvironment, userOp : UserOpStruct, signer : Signer) : Promise<string> {
   console.log("signer addr" + await signer.getAddress());
   const entryPoint = EntryPoint__factory.connect(config[hre.network.name].entrypoint, hre.ethers.provider);

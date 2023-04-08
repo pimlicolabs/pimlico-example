@@ -8,5 +8,10 @@
         "entrypoint" : "0x0576a174D229E3cFA37253523E645A78A0C91B57",
         "paymaster" : "0x3b912Be0270b59143985cC5c6aAb452D99E2B4bb",
         "factory" : "0x09c58cf6be8E25560d479bd52B4417d15bCA2845"
+    },
+    "linea-testnet": {
+        "entrypoint" : "0x0576a174D229E3cFA37253523E645A78A0C91B57",
+        "paymaster" : "0x4Df91e173A6CdC74EfeF6fC72bb5Df1E8A8d7582",
+        "factory" : "0x09c58cf6be8E25560d479bd52B4417d15bCA2845"
     }
 }

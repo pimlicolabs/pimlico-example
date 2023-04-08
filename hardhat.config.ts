@@ -30,6 +30,12 @@ const config: HardhatUserConfig = {
   networks: {
     goerli: getNetwork('goerli'),
     arbitrum: getNetwork('arbitrum-mainnet'),
+    "linea-testnet": {
+      url: `https://rpc.goerli.linea.build/`,
+      accounts: mnemonic.startsWith('0x') ? [mnemonic] : {
+        mnemonic: mnemonic,
+      },
+    },
   }
 };
 
@@ -56,6 +62,7 @@ task("test-paymaster", "Test paymaster")
       initCode: initCode,
       callData: await callData(hre, sender.address, 0, "0x"),
     });
+    console.log(userOp)
     let signer : Signer;
     if(taskArgs.owner.toLowerCase() == "0xae72a48c1a36bd18af168541c53037965d26e4a8") {
       // test account

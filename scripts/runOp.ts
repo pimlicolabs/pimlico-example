@@ -10,7 +10,7 @@ const PIMLICO_API_KEY = process.env.PIMLICO_API_KEY;
 const config = require('../configs/config.json');
 
 function getBundlerUrl(network : string) : string {
-  return `https://api-staging.pimlico.io/v1/${network}/rpc?apikey=${PIMLICO_API_KEY}`
+  return `https://api.pimlico.io/v1/${network}/rpc?apikey=${PIMLICO_API_KEY}`
 }
 
 interface UserOpStruct {

@@ -20,9 +20,9 @@ For demonstration purposes, use the address 0xae72a48c1a36bd18af168541c53037965d
 
 Execute the following command to send a blank transaction to itself through the Pimlico RPC endpoint:
 
-`npx hardhat test-bundler --owner <OWNER ADDRESS> --nonce <ACCOUNT INDEX> --network <NETWORK NAME>`
+`npx hardhat test-bundler --owner <OWNER ADDRESS> --network <NETWORK NAME>`
 
-For example: `npx hardhat test-bundler --owner 0x0284EaFa1f47dff44112BDFeBB736B9e85B416c9 --nonce 0 --network goerli`
+For example: `npx hardhat test-bundler --owner 0x0284EaFa1f47dff44112BDFeBB736B9e85B416c9 --network goerli`
 
 This command will create a sender if necessary.
 
@@ -30,8 +30,8 @@ This command will create a sender if necessary.
 
 To send a blank transaction to itself through the Pimlico RPC endpoint, sponsored by a paymaster, use the following command:
 
-`npx hardhat test-paymaster --owner <OWNER ADDRESS> --nonce <ACCOUNT INDEX> --network <NETWORK NAME>`
+`npx hardhat test-paymaster --owner <OWNER ADDRESS> --network <NETWORK NAME>`
 
-For example: `npx hardhat test-paymaster --owner 0x0284EaFa1f47dff44112BDFeBB736B9e85B416c9 --nonce 0 --network goerli`
+For example: `npx hardhat test-paymaster --owner 0x0284EaFa1f47dff44112BDFeBB736B9e85B416c9 --network goerli`
 
 Similar to the previous test, this command will create a sender if needed.

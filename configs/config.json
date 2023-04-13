@@ -1,17 +1,17 @@
 {
     "arbitrum" : {
-        "entrypoint" : "0x0576a174D229E3cFA37253523E645A78A0C91B57",
-        "paymaster" : "0xa880EaE8900eB59Bf7daD9BdB741A086238aDCa9",
-        "factory" : "0x09c58cf6be8E25560d479bd52B4417d15bCA2845"
+        "entrypoint" : "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+        "paymaster" : "0x2672a6a67C37c104Db47D52baAA721C8ECa39421",
+        "factory" : "0x9406Cc6185a346906296840746125a0E44976454"
     },
     "goerli" : {
-        "entrypoint" : "0x0576a174D229E3cFA37253523E645A78A0C91B57",
-        "paymaster" : "0x3b912Be0270b59143985cC5c6aAb452D99E2B4bb",
-        "factory" : "0x09c58cf6be8E25560d479bd52B4417d15bCA2845"
+        "entrypoint" : "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+        "paymaster" : "0x0e3439E8F1c17d8D2bAa7338A880A1dc8b495153",
+        "factory" : "0x9406Cc6185a346906296840746125a0E44976454"
     },
     "linea-testnet": {
-        "entrypoint" : "0x0576a174D229E3cFA37253523E645A78A0C91B57",
-        "paymaster" : "0x4Df91e173A6CdC74EfeF6fC72bb5Df1E8A8d7582",
-        "factory" : "0x09c58cf6be8E25560d479bd52B4417d15bCA2845"
+        "entrypoint" : "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+        "paymaster" : "0xcF60744ef322396a6d0a5B7d396F5814176855F1",
+        "factory" : "0x9406Cc6185a346906296840746125a0E44976454"
     }
 }

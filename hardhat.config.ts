@@ -1,17 +1,26 @@
 import { HardhatUserConfig } from "hardhat/config";
 import fs from 'fs'
 import { task } from "hardhat/config";
-import { runOp1, callData, fillUserOp, getInitCode, getSender, signUserOp, signUserOpWithPaymaster, estimateUserOperationGas } from "./scripts/runOp";
+import { sendUserOperation, callData, fillUserOp, getInitCode, getSender, signUserOp, signUserOpWithPaymaster, estimateUserOperationGas, getUserOperationReceipt } from "./scripts/runOp";
 import "@nomiclabs/hardhat-ethers";
 import { hexlify } from "ethers/lib/utils";
-import { Signer, Wallet } from "ethers";
+import { Signer, Wallet, ethers } from "ethers";
 require('dotenv').config();
 
 const infuraKey = process.env.INFURA_KEY;
 const mnemonicFileName = process.env.MNEMONIC_FILE
-let mnemonic = 'test '.repeat(11) + 'junk'
-if (mnemonicFileName != null && fs.existsSync(mnemonicFileName)) {
+if (infuraKey == null) {
+  throw new Error("Please set your INFURA_KEY in a .env file");
+}
+
+if (mnemonicFileName == null) {
+  throw new Error("Please set your MNEMONIC_FILE in a .env file");
+}
+let mnemonic: string
+if (fs.existsSync(mnemonicFileName)) {
   mnemonic = fs.readFileSync(mnemonicFileName, 'ascii').trim()
+} else {
+  throw new Error(`Mnemonic file ${mnemonicFileName} not found`)
 }
 
 function getNetwork(network : string) {
@@ -41,27 +50,30 @@ const config: HardhatUserConfig = {
 
 task('get-sender', 'Get sender address')
   .addParam('owner', 'Owner address')
-  .addParam('nonce', 'Nonce')
   .setAction(async (taskArgs, hre) => {
-    const sender = await getSender(hre,taskArgs.owner, taskArgs.nonce);
-    console.log("sender addr : " + sender.address);
+    const sender = await getSender(hre,taskArgs.owner);
+    console.log("Sender address:" + sender.address);
   });
 
+// test with paymaster flow and bundler flow - api key should be loaded up with balance for this to work
 task("test-paymaster", "Test paymaster")
   .addParam('owner', 'Owner address')
-  .addParam('nonce', 'Nonce')
   .setAction(async (taskArgs, hre) => {
-    const sender = await getSender(hre,taskArgs.owner, taskArgs.nonce);
+    console.log("Getting sender...")
+    const sender = await getSender(hre,taskArgs.owner);
+    console.log("Got sender:", sender.address)
     let initCode = "0x";
     if(await hre.ethers.provider.getCode(sender.address) == '0x') {
-      console.log("Sender is not deployed");
-      initCode = getInitCode(hre, taskArgs.owner, taskArgs.nonce);
+      console.log("Sender is not deployed, generating initCode...");
+      initCode = getInitCode(hre, taskArgs.owner);
     }
     const userOp = await fillUserOp(hre, {
       sender: sender.address,
       initCode: initCode,
       callData: await callData(hre, sender.address, 0, "0x"),
     });
+    console.log("---------------------------------------------")
+    console.log("User Operation created:")
     console.log(userOp)
     let signer : Signer;
     if(taskArgs.owner.toLowerCase() == "0xae72a48c1a36bd18af168541c53037965d26e4a8") {
@@ -70,27 +82,51 @@ task("test-paymaster", "Test paymaster")
     } else {
       signer = hre.ethers.provider.getSigner(taskArgs.owner);
     }
+    console.log("---------------------------------------------")
+    console.log("Requesting Pimlico paymaster sponsorship (pm_sponsorUserOperation)...")
     userOp.paymasterAndData = hexlify(await signUserOpWithPaymaster(hre, userOp));
+    console.log("Pimlico paymasterAndData received:", userOp.paymasterAndData)
+    console.log("---------------------------------------------")
+    console.log("Signing user operation with owner...")
     userOp.signature = hexlify(await signUserOp(hre, userOp, signer));
-    await runOp1(hre, userOp);
+    console.log("User operation signature generated:", userOp.signature)
+    console.log("---------------------------------------------")
+    console.log("Sending user operation to Pimlico bundler (eth_sendUserOperation)...")
+    const userOpHash = await sendUserOperation(hre, userOp);
+    console.log("User operation hash received: ", userOpHash);
+    console.log("---------------------------------------------")
+    console.log("Waiting for user operation receipt (eth_getUserOperationReceipt)...")
+    let receipt = await getUserOperationReceipt(hre, userOpHash)
+    while (receipt == null) {
+      await new Promise(r => setTimeout(r, 1000));
+      console.log("Waiting for user operation receipt (eth_getUserOperationReceipt)...")
+      receipt = await getUserOperationReceipt(hre, userOpHash)
+    }
+    console.log("User operation receipt received:", receipt);
+    console.log("Pimlico example flow complete!")
   });
 
+// test with bundler flow only
 task("test-bundler", "Test bundler")
   .addParam('owner', 'Owner address')
   .addParam('nonce', 'Nonce')
   .setAction(async (taskArgs, hre) => {
-    const sender = await getSender(hre,taskArgs.owner, taskArgs.nonce);
-    console.log("sender addr : " + sender.address);
+    console.log("Getting sender...")
+    const sender = await getSender(hre,taskArgs.owner);
+    console.log("Got sender:", sender.address)
     let initCode = "0x";
     if(await hre.ethers.provider.getCode(sender.address) == '0x') {
-      console.log("Sender is not deployed");
-      initCode = getInitCode(hre, taskArgs.owner, taskArgs.nonce);
+      console.log("Sender is not deployed, generating initCode...");
+      initCode = getInitCode(hre, taskArgs.owner);
     }
     const userOp = await fillUserOp(hre, {
       sender: sender.address,
       initCode: initCode,
       callData: await callData(hre, sender.address, 0, "0x"),
     });
+    console.log("---------------------------------------------")
+    console.log("User Operation created:")
+    console.log(userOp)
     let signer : Signer;
     if(taskArgs.owner.toLowerCase() == "0xae72a48c1a36bd18af168541c53037965d26e4a8") {
       // test account
@@ -98,31 +134,24 @@ task("test-bundler", "Test bundler")
     } else {
       signer = hre.ethers.provider.getSigner(taskArgs.owner);
     }
+    console.log("---------------------------------------------")
+    console.log("Signing user operation with owner...")
     userOp.signature = hexlify(await signUserOp(hre, userOp, signer));
-    userOp.paymasterAndData = hexlify("0x");
-    await runOp1(hre, userOp);
-  });
-
-task("test-estimateGas", "Test estimateGas")
-  .addParam('owner', 'Owner address')
-  .addParam('nonce', 'Nonce')
-  .setAction(async (taskArgs, hre) => {
-    const sender = await getSender(hre,taskArgs.owner, taskArgs.nonce);
-    let initCode = "0x";
-    if(await hre.ethers.provider.getCode(sender.address) == '0x') {
-      console.log("Sender is not deployed");
-      initCode = getInitCode(hre, taskArgs.owner, taskArgs.nonce);
+    console.log("User operation signature generated:", userOp.signature)
+    console.log("---------------------------------------------")
+    console.log("Sending user operation to Pimlico bundler (eth_sendUserOperation)...")
+    const userOpHash = await sendUserOperation(hre, userOp);
+    console.log("User operation hash received: ", userOpHash);
+    console.log("---------------------------------------------")
+    console.log("Waiting for user operation receipt (eth_getUserOperationReceipt)...")
+    let receipt = await getUserOperationReceipt(hre, userOpHash)
+    while (receipt == null) {
+      await new Promise(r => setTimeout(r, 1000));
+      console.log("Waiting for user operation receipt (eth_getUserOperationReceipt)...")
+      receipt = await getUserOperationReceipt(hre, userOpHash)
     }
-    const userOp = await fillUserOp(hre, {
-      sender: sender.address,
-      initCode: initCode,
-      callData: await callData(hre, sender.address, 0, "0x"),
-    });
-
-    const { preVerificationGas, verificationGas, callGasLimit } = await estimateUserOperationGas(hre, userOp);
-    console.log("preVerificationGas: " + preVerificationGas);
-    console.log("verificationGas: " + verificationGas);
-    console.log("callGasLimit: " + callGasLimit);
-  })
+    console.log("User operation receipt received:", receipt);
+    console.log("Pimlico example flow complete!")
+  });
 
 export default config;

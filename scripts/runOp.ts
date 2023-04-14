@@ -1,7 +1,8 @@
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BigNumberish, Signer } from "ethers";
-import { SimpleAccountFactory__factory, SimpleAccountFactory, EntryPoint__factory, SimpleAccount, SimpleAccount__factory } from "@account-abstraction/contracts";
-import { arrayify, hexConcat, hexlify } from "ethers/lib/utils";
+import { EntryPoint__factory } from "@account-abstraction/contracts";
+import { Delegatable4337Account, Delegatable4337AccountFactory, Delegatable4337Account__factory, Delegatable4337AccountFactory__factory } from "../typechain-types";
+import { arrayify, defaultAbiCoder, hexConcat, hexlify } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 require('dotenv').config();
@@ -60,14 +61,14 @@ export async function signUserOp(hre: HardhatRuntimeEnvironment, userOp : UserOp
   return signature;
 }
 
-export async function callData(hre: HardhatRuntimeEnvironment, to : string, value: BigNumberish, data: string) : Promise<string> {
-  const account = SimpleAccount__factory.connect(config[hre.network.name].factory, hre.ethers.provider);
+export async function callData(hre: HardhatRuntimeEnvironment, to : string, value: BigNumberish, data: string, factory?: Delegatable4337AccountFactory) : Promise<string> {
+  const account = Delegatable4337Account__factory.connect(factory?.address ?? config[hre.network.name].factory, hre.ethers.provider);
   return account.interface.encodeFunctionData('execute', [to, value, data]);
 }
 
 export async function fillUserOp(hre: HardhatRuntimeEnvironment, userOp:Partial<UserOpStruct>) : Promise<UserOpStruct> {
   const signer = hre.ethers.provider.getSigner();
-  const sender = SimpleAccount__factory.connect(userOp.sender!, signer);
+  const sender = Delegatable4337Account__factory.connect(userOp.sender!, signer);
   if(await hre.ethers.provider.getCode(userOp.sender!) == '0x') {
     userOp.nonce = hexlify(0);
   } else {
@@ -97,16 +98,27 @@ export async function signUserOpWithPaymaster(hre: HardhatRuntimeEnvironment, us
   return signature.paymasterAndData;
 }
 
+export async function deployFactory(hre: HardhatRuntimeEnvironment, signer?: Signer) : Promise<Delegatable4337AccountFactory> {
+  if(!signer) {
+    signer = hre.ethers.provider.getSigner();
+  }
+  const factory = new Delegatable4337AccountFactory__factory(signer);
+  const deployment = await factory.deploy(config[hre.network.name].entrypoint);
+  return deployment
+}
+
 export function getInitCode(hre: HardhatRuntimeEnvironment, owner : string) : string {
-  const factory = SimpleAccountFactory__factory.connect(config[hre.network.name].factory, hre.ethers.provider);
-  const data = hexConcat([factory.address, factory.interface.encodeFunctionData('createAccount', [owner, 0])]);
+  const constructorArgs = defaultAbiCoder.encode(["address", "address"], [config[hre.network.name].entrypoint, owner])
+  const bytecode = Delegatable4337AccountFactory__factory.bytecode;
+  const data = hexConcat([config[hre.network.name].factory, "0x0000000000000000000000000000000000000000000000000000000000000000", bytecode, constructorArgs]);
   return data;
 }
 
-export async function getSender(hre : HardhatRuntimeEnvironment, owner : string) : Promise<SimpleAccount> {
+export async function getSender(hre : HardhatRuntimeEnvironment, owner : string) : Promise<Delegatable4337Account> {
   const signer = hre.ethers.provider.getSigner();
   const entryPoint = EntryPoint__factory.connect(config[hre.network.name].entrypoint, signer);
   const initCode = getInitCode(hre, owner);
+  console.log("initCode:", initCode)
   const sender : string = await entryPoint.getSenderAddress(initCode).then(x => {
     throw new Error("should be reverted");
   }).catch((e) => {
@@ -114,5 +126,5 @@ export async function getSender(hre : HardhatRuntimeEnvironment, owner : string)
     const addr = hre.ethers.utils.getAddress('0x' + data.slice(24, 64));
     return addr;
   });
-  return SimpleAccount__factory.connect(sender, hre.ethers.provider);
+  return Delegatable4337Account__factory.connect(sender, hre.ethers.provider);
 }

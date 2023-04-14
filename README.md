@@ -12,6 +12,8 @@ Then echo your mnemonic into a file:
 
 Finally, update the .env file with your Pimlico API key, Infura API key (not the whole URL).
 
+You might get an error at first from a lack of the typechain file existence. To fix this problem, first comment-out the typechain import line, run `npx hardhat compile`, (which will generate the types), and then you can restore that import line.
+
 ## Running Tests
 
 For demonstration purposes, use the address 0xae72a48c1a36bd18af168541c53037965d26e4a8 as the owner. This address corresponds to the private key 0x7777....7777.

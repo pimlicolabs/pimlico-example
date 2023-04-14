@@ -1,10 +1,13 @@
 import { HardhatUserConfig } from "hardhat/config";
 import fs from 'fs'
 import { task } from "hardhat/config";
-import { sendUserOperation, callData, fillUserOp, getInitCode, getSender, signUserOp, signUserOpWithPaymaster, estimateUserOperationGas, getUserOperationReceipt } from "./scripts/runOp";
+import { sendUserOperation, callData, fillUserOp, getInitCode, getSender, signUserOp, signUserOpWithPaymaster, estimateUserOperationGas, getUserOperationReceipt, deployFactory } from "./scripts/runOp";
 import "@nomiclabs/hardhat-ethers";
 import { hexlify } from "ethers/lib/utils";
 import { Signer, Wallet, ethers } from "ethers";
+import '@typechain/hardhat'
+import '@nomiclabs/hardhat-ethers'
+import { Delegatable4337AccountFactory } from "./typechain-types";
 require('dotenv').config();
 
 const infuraKey = process.env.INFURA_KEY;
@@ -35,6 +38,9 @@ function getNetwork(network : string) {
 }
 
 const config: HardhatUserConfig = {
+  typechain: {
+    target: "ethers-v5",
+  },
   solidity: "0.8.18",
   networks: {
     goerli: getNetwork('goerli'),
@@ -48,6 +54,64 @@ const config: HardhatUserConfig = {
   }
 };
 
+const paymasterFlow = async (hre: any, owner: string, usePaymaster = true) => {
+  console.log("Getting sender...")
+    const sender = await getSender(hre, owner);
+    console.log("Got sender:", sender.address)
+    let initCode = "0x";
+    if(await hre.ethers.provider.getCode(sender.address) == '0x') {
+      console.log("Sender is not deployed, generating initCode...");
+      initCode = getInitCode(hre, owner);
+    }
+    const userOp = await fillUserOp(hre, {
+      sender: sender.address,
+      initCode: initCode,
+      callData: await callData(hre, sender.address, 0, "0x"),
+    });
+    console.log("---------------------------------------------")
+    console.log("User Operation created:")
+    console.log(userOp)
+    let signer : Signer;
+    if(owner.toLowerCase() == "0xae72a48c1a36bd18af168541c53037965d26e4a8") {
+      // test account
+      signer = new Wallet('0x'.padEnd(66, '7'));
+    } else {
+      signer = hre.ethers.provider.getSigner(owner);
+    }
+    console.log("---------------------------------------------")
+    if (usePaymaster) {
+      console.log("Requesting Pimlico paymaster sponsorship (pm_sponsorUserOperation)...")
+      userOp.paymasterAndData = hexlify(await signUserOpWithPaymaster(hre, userOp));
+      console.log("Pimlico paymasterAndData received:", userOp.paymasterAndData)
+      console.log("---------------------------------------------")
+    }
+    console.log("Signing user operation with owner...")
+    userOp.signature = hexlify(await signUserOp(hre, userOp, signer));
+    console.log("User operation signature generated:", userOp.signature)
+    console.log("---------------------------------------------")
+    console.log("Sending user operation to Pimlico bundler (eth_sendUserOperation)...")
+    const userOpHash = await sendUserOperation(hre, userOp);
+    console.log("User operation hash received: ", userOpHash);
+    console.log("---------------------------------------------")
+    console.log("Waiting for user operation receipt (eth_getUserOperationReceipt)...")
+    let receipt = await getUserOperationReceipt(hre, userOpHash)
+    while (receipt == null) {
+      await new Promise(r => setTimeout(r, 1000));
+      console.log("Waiting for user operation receipt (eth_getUserOperationReceipt)...")
+      receipt = await getUserOperationReceipt(hre, userOpHash)
+    }
+    console.log("User operation receipt received:", receipt);
+    console.log("Pimlico example flow complete!")
+}
+
+
+// combines the two flows - deploy factory and test-paymaster
+task('test-4337-delegatable-flow', 'Test 4337 delegatable flow')
+  .addParam('owner', 'Owner address')
+  .setAction(async (taskArgs, hre) => {
+        await paymasterFlow(hre, taskArgs.owner)
+  })
+
 task('get-sender', 'Get sender address')
   .addParam('owner', 'Owner address')
   .setAction(async (taskArgs, hre) => {
@@ -59,51 +123,7 @@ task('get-sender', 'Get sender address')
 task("test-paymaster", "Test paymaster")
   .addParam('owner', 'Owner address')
   .setAction(async (taskArgs, hre) => {
-    console.log("Getting sender...")
-    const sender = await getSender(hre,taskArgs.owner);
-    console.log("Got sender:", sender.address)
-    let initCode = "0x";
-    if(await hre.ethers.provider.getCode(sender.address) == '0x') {
-      console.log("Sender is not deployed, generating initCode...");
-      initCode = getInitCode(hre, taskArgs.owner);
-    }
-    const userOp = await fillUserOp(hre, {
-      sender: sender.address,
-      initCode: initCode,
-      callData: await callData(hre, sender.address, 0, "0x"),
-    });
-    console.log("---------------------------------------------")
-    console.log("User Operation created:")
-    console.log(userOp)
-    let signer : Signer;
-    if(taskArgs.owner.toLowerCase() == "0xae72a48c1a36bd18af168541c53037965d26e4a8") {
-      // test account
-      signer = new Wallet('0x'.padEnd(66, '7'));
-    } else {
-      signer = hre.ethers.provider.getSigner(taskArgs.owner);
-    }
-    console.log("---------------------------------------------")
-    console.log("Requesting Pimlico paymaster sponsorship (pm_sponsorUserOperation)...")
-    userOp.paymasterAndData = hexlify(await signUserOpWithPaymaster(hre, userOp));
-    console.log("Pimlico paymasterAndData received:", userOp.paymasterAndData)
-    console.log("---------------------------------------------")
-    console.log("Signing user operation with owner...")
-    userOp.signature = hexlify(await signUserOp(hre, userOp, signer));
-    console.log("User operation signature generated:", userOp.signature)
-    console.log("---------------------------------------------")
-    console.log("Sending user operation to Pimlico bundler (eth_sendUserOperation)...")
-    const userOpHash = await sendUserOperation(hre, userOp);
-    console.log("User operation hash received: ", userOpHash);
-    console.log("---------------------------------------------")
-    console.log("Waiting for user operation receipt (eth_getUserOperationReceipt)...")
-    let receipt = await getUserOperationReceipt(hre, userOpHash)
-    while (receipt == null) {
-      await new Promise(r => setTimeout(r, 1000));
-      console.log("Waiting for user operation receipt (eth_getUserOperationReceipt)...")
-      receipt = await getUserOperationReceipt(hre, userOpHash)
-    }
-    console.log("User operation receipt received:", receipt);
-    console.log("Pimlico example flow complete!")
+    paymasterFlow(hre, taskArgs.owner)
   });
 
 // test with bundler flow only
@@ -111,47 +131,7 @@ task("test-bundler", "Test bundler")
   .addParam('owner', 'Owner address')
   .addParam('nonce', 'Nonce')
   .setAction(async (taskArgs, hre) => {
-    console.log("Getting sender...")
-    const sender = await getSender(hre,taskArgs.owner);
-    console.log("Got sender:", sender.address)
-    let initCode = "0x";
-    if(await hre.ethers.provider.getCode(sender.address) == '0x') {
-      console.log("Sender is not deployed, generating initCode...");
-      initCode = getInitCode(hre, taskArgs.owner);
-    }
-    const userOp = await fillUserOp(hre, {
-      sender: sender.address,
-      initCode: initCode,
-      callData: await callData(hre, sender.address, 0, "0x"),
-    });
-    console.log("---------------------------------------------")
-    console.log("User Operation created:")
-    console.log(userOp)
-    let signer : Signer;
-    if(taskArgs.owner.toLowerCase() == "0xae72a48c1a36bd18af168541c53037965d26e4a8") {
-      // test account
-      signer = new Wallet('0x'.padEnd(66, '7'));
-    } else {
-      signer = hre.ethers.provider.getSigner(taskArgs.owner);
-    }
-    console.log("---------------------------------------------")
-    console.log("Signing user operation with owner...")
-    userOp.signature = hexlify(await signUserOp(hre, userOp, signer));
-    console.log("User operation signature generated:", userOp.signature)
-    console.log("---------------------------------------------")
-    console.log("Sending user operation to Pimlico bundler (eth_sendUserOperation)...")
-    const userOpHash = await sendUserOperation(hre, userOp);
-    console.log("User operation hash received: ", userOpHash);
-    console.log("---------------------------------------------")
-    console.log("Waiting for user operation receipt (eth_getUserOperationReceipt)...")
-    let receipt = await getUserOperationReceipt(hre, userOpHash)
-    while (receipt == null) {
-      await new Promise(r => setTimeout(r, 1000));
-      console.log("Waiting for user operation receipt (eth_getUserOperationReceipt)...")
-      receipt = await getUserOperationReceipt(hre, userOpHash)
-    }
-    console.log("User operation receipt received:", receipt);
-    console.log("Pimlico example flow complete!")
+    paymasterFlow(hre, taskArgs.owner, false)
   });
 
 export default config;

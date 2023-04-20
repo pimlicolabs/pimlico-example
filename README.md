@@ -35,3 +35,19 @@ To send a blank transaction to itself through the Pimlico RPC endpoint, sponsore
 For example: `npx hardhat test-paymaster --owner 0x0284EaFa1f47dff44112BDFeBB736B9e85B416c9 --network goerli`
 
 Similar to the previous test, this command will create a sender if needed.
+
+### Test factory access storage with minimum stake amount
+
+To test the factory access storage with a minimum stake amount, use the following command:
+
+`npx hardhat test-factory-access-storage --network <NETWORK NAME>`
+
+this command will
+
+1. create factory that access storage while deploying
+
+2. stake 1 wei to the entrypoint on behalf of the factory
+
+3. send 0.1 ether to sender address(for gas fee)
+
+4. create sender with bundler

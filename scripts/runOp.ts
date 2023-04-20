@@ -60,6 +60,38 @@ export async function signUserOp(hre: HardhatRuntimeEnvironment, userOp : UserOp
   return signature;
 }
 
+export async function testCreateAccount(hre: HardhatRuntimeEnvironment, signer : Signer) : Promise<string> {
+  const bundlerProvider = new JsonRpcProvider(getBundlerUrl(hre.network.name));
+
+  const factory = await hre.ethers.getContractFactory("StorageAccountFactory")
+  const contract =  await factory.connect(signer).deploy("0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789");
+  console.log("Factory address: ", contract.address);
+  const sender = await contract.getAddress(await signer.getAddress(), 0);
+  console.log("Sender Address: ", sender)
+
+  const sampleAccount = await hre.ethers.getContractFactory("SampleAccount")
+  const stakingTx = await contract.stake({value: 1})
+  await stakingTx.wait(3)
+
+  const fundingTx = await signer.sendTransaction({
+    to:sender,
+    value: hre.ethers.utils.parseEther("0.1")
+  })
+
+  await fundingTx.wait(3)
+  const userOp = await fillUserOp(hre, {
+    sender: sender,
+    initCode: hexConcat([contract.address, factory.interface.encodeFunctionData('createAccount', [await signer.getAddress(), 0])]),
+    callData: sampleAccount.interface.encodeFunctionData("doNothing",[]),
+  });
+
+  await bundlerProvider.send("eth_sendUserOperation", [
+    userOp,
+    "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+  ]);
+  return sender;
+}
+
 export async function callData(hre: HardhatRuntimeEnvironment, to : string, value: BigNumberish, data: string) : Promise<string> {
   const account = SimpleAccount__factory.connect(config[hre.network.name].factory, hre.ethers.provider);
   return account.interface.encodeFunctionData('execute', [to, value, data]);

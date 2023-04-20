@@ -1,11 +1,7 @@
 import { HardhatUserConfig } from "hardhat/config";
 import fs from 'fs'
 import { task } from "hardhat/config";
-<<<<<<< HEAD
-import { sendUserOperation, callData, fillUserOp, getInitCode, getSender, signUserOp, signUserOpWithPaymaster, estimateUserOperationGas, getUserOperationReceipt } from "./scripts/runOp";
-=======
-import { runOp1, callData, fillUserOp, getInitCode, getSender, signUserOp, signUserOpWithPaymaster, estimateUserOperationGas, testCreateAccount } from "./scripts/runOp";
->>>>>>> b92b1d1 (sample for factory with storage access)
+import { callData, fillUserOp, getInitCode, getSender, signUserOp, signUserOpWithPaymaster, testCreateAccount,sendUserOperation,getUserOperationReceipt } from "./scripts/runOp";
 import "@nomiclabs/hardhat-ethers";
 import { hexlify } from "ethers/lib/utils";
 import { Signer, Wallet, ethers } from "ethers";

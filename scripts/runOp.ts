@@ -71,6 +71,7 @@ export async function testCreateAccount(hre: HardhatRuntimeEnvironment, signer :
 
   const sampleAccount = await hre.ethers.getContractFactory("SampleAccount")
   const stakingTx = await contract.stake({value: 1})
+  console.log("waiting for staking tx to be confirmed...")
   await stakingTx.wait(3)
 
   const fundingTx = await signer.sendTransaction({
@@ -79,6 +80,7 @@ export async function testCreateAccount(hre: HardhatRuntimeEnvironment, signer :
   })
 
   await fundingTx.wait(3)
+  console.log("waiting for funding tx to be confirmed...")
   const userOp = await fillUserOp(hre, {
     sender: sender,
     initCode: hexConcat([contract.address, factory.interface.encodeFunctionData('createAccount', [await signer.getAddress(), 0])]),

@@ -40,7 +40,7 @@ Similar to the previous test, this command will create a sender if needed.
 
 To test the factory access storage with a minimum stake amount, use the following command:
 
-`npx hardhat test-factory-access-storage --network <NETWORK NAME>`
+`npx hardhat test-factory-with-storage --network <NETWORK NAME>`
 
 this command will
 

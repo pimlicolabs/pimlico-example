@@ -64,7 +64,7 @@ export async function testCreateAccount(hre: HardhatRuntimeEnvironment, signer :
   const bundlerProvider = new JsonRpcProvider(getBundlerUrl(hre.network.name));
 
   const factory = await hre.ethers.getContractFactory("StorageAccountFactory")
-  const contract =  await factory.connect(signer).deploy("0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789");
+  const contract =  await factory.connect(signer).deploy(config[hre.network.name].entrypoint);
   console.log("Factory address: ", contract.address);
   const sender = await contract.getAddress(await signer.getAddress(), 0);
   console.log("Sender Address: ", sender)
@@ -89,7 +89,7 @@ export async function testCreateAccount(hre: HardhatRuntimeEnvironment, signer :
 
   await bundlerProvider.send("eth_sendUserOperation", [
     userOp,
-    "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+    config[hre.network.name].entrypoint,
   ]);
   return sender;
 }
